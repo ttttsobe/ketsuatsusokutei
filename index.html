@@ -1,34 +1,74 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
+<meta charset="UTF-8">
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
+
+<title>Finger BP</title>
 
 <style>
 
 body{
+    margin:0;
     background:#111;
     color:white;
     font-family:sans-serif;
     text-align:center;
+}
+
+.container{
     padding:20px;
 }
 
+button{
+    font-size:24px;
+    padding:16px 32px;
+    border:none;
+    border-radius:16px;
+    background:#ff3b30;
+    color:white;
+    margin-top:20px;
+}
+
 video{
-    width:95%;
+    width:90%;
     border-radius:20px;
     margin-top:20px;
 }
 
+canvas{
+    width:90%;
+    height:180px;
+    background:#000;
+    border-radius:16px;
+    margin-top:20px;
+}
+
+#timer{
+    font-size:48px;
+    margin-top:20px;
+}
+
 #bpm{
-    font-size:40px;
-    margin-top:30px;
+    font-size:42px;
+    margin-top:20px;
 }
 
 #bp{
     font-size:64px;
     font-weight:bold;
-    margin-top:20px;
+    margin-top:10px;
+}
+
+.small{
+    font-size:24px;
+    margin-top:10px;
+    color:#aaa;
+}
+
+.hidden{
+    display:none;
 }
 
 </style>
@@ -36,29 +76,72 @@ video{
 
 <body>
 
-<h1>指をカメラに置いてください</h1>
+<div class="container">
 
-<video id="video"
-       autoplay
-       playsinline></video>
+    <h1>Finger Blood Pressure</h1>
 
-<canvas id="canvas"
-        style="display:none"></canvas>
+    <div id="startScreen">
 
-<div id="bpm">BPM: --</div>
+        <p>
+            カメラに指を密着してください
+        </p>
 
-<div id="bp">120 / 80</div>
+        <button onclick="startMeasurement()">
+            計測開始
+        </button>
+
+    </div>
+
+    <div id="measureScreen"
+         class="hidden">
+
+        <div id="timer">
+            20
+        </div>
+
+        <video id="video"
+               autoplay
+               playsinline></video>
+
+        <canvas id="wave"></canvas>
+
+        <div id="bpm">
+            BPM: --
+        </div>
+
+        <div id="bp">
+            -- / --
+        </div>
+
+        <div class="small"
+             id="minmax">
+
+            MIN: -- / --
+            <br>
+            MAX: -- / --
+
+        </div>
+
+    </div>
+
+</div>
 
 <script>
+
+const startScreen =
+    document.getElementById("startScreen");
+
+const measureScreen =
+    document.getElementById("measureScreen");
 
 const video =
     document.getElementById("video");
 
-const canvas =
-    document.getElementById("canvas");
+const waveCanvas =
+    document.getElementById("wave");
 
-const ctx =
-    canvas.getContext("2d");
+const waveCtx =
+    waveCanvas.getContext("2d");
 
 const bpmText =
     document.getElementById("bpm");
@@ -66,11 +149,31 @@ const bpmText =
 const bpText =
     document.getElementById("bp");
 
+const timerText =
+    document.getElementById("timer");
+
+const minmaxText =
+    document.getElementById("minmax");
+
+let stream = null;
+
 let samples = [];
 
-async function startCamera(){
+let timer = 20;
 
-    const stream =
+let interval = null;
+
+let sysValues = [];
+
+let diaValues = [];
+
+async function startMeasurement(){
+
+    startScreen.classList.add("hidden");
+
+    measureScreen.classList.remove("hidden");
+
+    stream =
         await navigator.mediaDevices.getUserMedia({
             video:{
                 facingMode:{
@@ -81,29 +184,104 @@ async function startCamera(){
 
     video.srcObject = stream;
 
-    setInterval(analyzeFrame, 100);
+    // Torch ON
+    const track =
+        stream.getVideoTracks()[0];
+
+    const capabilities =
+        track.getCapabilities();
+
+    if(capabilities.torch){
+
+        try{
+
+            await track.applyConstraints({
+                advanced:[
+                    {torch:true}
+                ]
+            });
+
+        }catch(e){
+            console.log(e);
+        }
+    }
+
+    interval =
+        setInterval(analyzeFrame, 100);
+
+    startTimer();
+}
+
+function startTimer(){
+
+    const countdown =
+        setInterval(()=>{
+
+            timer--;
+
+            timerText.innerText = timer;
+
+            if(timer <= 0){
+
+                clearInterval(countdown);
+
+                stopMeasurement();
+            }
+
+        },1000);
+}
+
+function stopMeasurement(){
+
+    clearInterval(interval);
+
+    if(stream){
+
+        stream.getTracks().forEach(track=>{
+            track.stop();
+        });
+    }
+
+    video.srcObject = null;
+
+    timerText.innerText = "完了";
 }
 
 function analyzeFrame(){
 
     if(video.videoWidth === 0) return;
 
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+    waveCanvas.width =
+        waveCanvas.clientWidth;
 
-    ctx.drawImage(video, 0, 0);
+    waveCanvas.height =
+        waveCanvas.clientHeight;
+
+    const tempCanvas =
+        document.createElement("canvas");
+
+    tempCanvas.width =
+        video.videoWidth;
+
+    tempCanvas.height =
+        video.videoHeight;
+
+    const tempCtx =
+        tempCanvas.getContext("2d");
+
+    tempCtx.drawImage(video,0,0);
 
     const frame =
-        ctx.getImageData(
+        tempCtx.getImageData(
             0,
             0,
-            canvas.width,
-            canvas.height
+            tempCanvas.width,
+            tempCanvas.height
         );
 
     let redTotal = 0;
 
-    for(let i=0; i<frame.data.length; i += 4){
+    for(let i=0; i<frame.data.length; i+=4){
 
         redTotal += frame.data[i];
     }
@@ -114,11 +292,12 @@ function analyzeFrame(){
 
     samples.push(avg);
 
-    if(samples.length > 120){
+    if(samples.length > 200){
         samples.shift();
     }
 
     calculate();
+    drawWave();
 }
 
 function calculate(){
@@ -131,35 +310,108 @@ function calculate(){
 
     let peaks = 0;
 
-    for(let v of samples){
+    for(let i=1; i<samples.length-1; i++){
 
-        if(v > mean + 2){
+        if(
+            samples[i] > mean + 2 &&
+            samples[i] > samples[i-1] &&
+            samples[i] > samples[i+1]
+        ){
             peaks++;
         }
     }
 
-    const bpm =
-        Math.max(50,
-        Math.min(140, peaks * 5));
+    let bpm =
+        peaks * 3;
+
+    bpm =
+        Math.max(55,
+        Math.min(140,bpm));
 
     bpmText.innerText =
         "BPM: " + bpm;
 
-    const sys =
+    let sys =
         Math.round(
-            110 + (bpm - 70) * 0.6
+            110 + (bpm - 70) * 0.7
         );
 
-    const dia =
+    let dia =
         Math.round(
-            70 + (bpm - 70) * 0.35
+            70 + (bpm - 70) * 0.4
         );
+
+    sysValues.push(sys);
+    diaValues.push(dia);
+
+    const minSys =
+        Math.min(...sysValues);
+
+    const maxSys =
+        Math.max(...sysValues);
+
+    const minDia =
+        Math.min(...diaValues);
+
+    const maxDia =
+        Math.max(...diaValues);
 
     bpText.innerText =
         sys + " / " + dia;
+
+    minmaxText.innerHTML =
+        `
+        MIN: ${minSys}/${minDia}
+        <br>
+        MAX: ${maxSys}/${maxDia}
+        `;
 }
 
-startCamera();
+function drawWave(){
+
+    waveCtx.clearRect(
+        0,
+        0,
+        waveCanvas.width,
+        waveCanvas.height
+    );
+
+    waveCtx.beginPath();
+
+    const max =
+        Math.max(...samples);
+
+    const min =
+        Math.min(...samples);
+
+    samples.forEach((v,i)=>{
+
+        const x =
+            i *
+            (waveCanvas.width / samples.length);
+
+        const y =
+            waveCanvas.height -
+            (
+                (v - min) /
+                (max - min)
+            ) *
+            waveCanvas.height;
+
+        if(i===0){
+            waveCtx.moveTo(x,y);
+        }else{
+            waveCtx.lineTo(x,y);
+        }
+    });
+
+    waveCtx.strokeStyle =
+        "#00ff88";
+
+    waveCtx.lineWidth = 3;
+
+    waveCtx.stroke();
+}
 
 </script>
 
