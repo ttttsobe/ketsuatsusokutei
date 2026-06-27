@@ -5,7 +5,7 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
-<title>Finger BP</title>
+<title>血圧測定</title>
 
 <style>
 
@@ -229,7 +229,7 @@ async function startMeasurement(){
     }
 
     interval =
-        setInterval(analyzeFrame, 100);
+        setInterval(analyzeFrame, 40);
 
     startTimer();
 }
@@ -378,21 +378,29 @@ function calculate(){
         samples.reduce((a,b)=>a+b,0)
         / samples.length;
 
-    let peaks = 0;
+    let peaks = [];
 
-    for(let i=1; i<samples.length-1; i++){
+for(let i=1; i<samples.length-1; i++){
 
+    if(
+        samples[i] > mean + 1.2 &&
+        samples[i] > samples[i-1] &&
+        samples[i] > samples[i+1]
+    ){
+
+        // 近すぎるピークを除外
         if(
-            samples[i] > mean + 2 &&
-            samples[i] > samples[i-1] &&
-            samples[i] > samples[i+1]
+            peaks.length === 0 ||
+            i - peaks[peaks.length - 1] > 5
         ){
-            peaks++;
+            peaks.push(i);
         }
     }
+}
 
-    let bpm =
-        peaks * 3;
+// 20秒ベース換算
+let bpm =
+    peaks.length * 6;
 
     bpm =
         Math.max(55,
@@ -403,14 +411,14 @@ function calculate(){
       bpmValues.push(bpm);
 
     let sys =
-        Math.round(
-            110 + (bpm - 70) * 0.7
-        );
+    Math.round(
+        116 + (bpm - 70) * 0.45
+    );
 
-    let dia =
-        Math.round(
-            70 + (bpm - 70) * 0.4
-        );
+let dia =
+    Math.round(
+        65 + (bpm - 70) * 0.25
+    );
 
     sysValues.push(sys);
     diaValues.push(dia);
