@@ -5,7 +5,7 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
-<title>血圧測定v1</title>
+<title>血圧測定v2</title>
 
 <style>
 
@@ -219,12 +219,11 @@ if(!selectedCamera){
     selectedCamera = cameras[0];
 }
 
-stream =
+sstream =
     await navigator.mediaDevices.getUserMedia({
         video:{
-            deviceId:{
-                exact:
-                    selectedCamera.deviceId
+            facingMode:{
+                ideal:"environment"
             },
             width:{ ideal:1280 },
             height:{ ideal:720 },
