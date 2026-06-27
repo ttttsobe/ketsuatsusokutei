@@ -5,7 +5,7 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
-<title>血圧測定v1.3</title>
+<title>血圧測定v1.4</title>
 
 <style>
 
@@ -88,7 +88,7 @@ canvas{
 
 <div class="container">
 
-    <h1>血圧測定v1.3</h1>
+    <h1>血圧測定v1.4</h1>
 
     <div id="startScreen">
 
@@ -183,7 +183,7 @@ let stream = null;
 
 let samples = [];
 
-let timer = 20;
+let timer = 30;
 
 let interval = null;
 
@@ -199,7 +199,7 @@ async function startMeasurement(){
 
     measureScreen.classList.remove("hidden");
 
-    timer = 20;
+    timer = 30;
 
     samples = [];
 
@@ -431,7 +431,10 @@ function analyzeFrame(){
 
 function calculate(){
 
-    if(samples.length < 30) return;
+    // 最初の安定化待ち
+    if(samples.length < 80){
+        return;
+    }
 
     const mean =
         samples.reduce((a,b)=>a+b,0)
@@ -442,14 +445,14 @@ function calculate(){
     for(let i=1; i<samples.length-1; i++){
 
         if(
-            samples[i] > mean + 1.2 &&
+            samples[i] > mean + 0.5 &&
             samples[i] > samples[i-1] &&
             samples[i] > samples[i+1]
         ){
 
             if(
                 peaks.length === 0 ||
-                i - peaks[peaks.length - 1] > 5
+                i - peaks[peaks.length - 1] > 2
             ){
                 peaks.push(i);
             }
@@ -457,7 +460,7 @@ function calculate(){
     }
 
     let bpm =
-        (peaks.length * 6);
+        (peaks.length * 6.8);
 
     bpm =
         Math.max(
@@ -471,14 +474,14 @@ function calculate(){
     bpmValues.push(bpm);
 
     let sys =
-        Math.round(
-            116 + (bpm - 70) * 0.45
-        );
+    Math.round(
+        118 + (bpm - 70) * 0.5
+    );
 
-    let dia =
-        Math.round(
-            65 + (bpm - 70) * 0.25
-        );
+let dia =
+    Math.round(
+        67 + (bpm - 70) * 0.3
+    );
 
     sysValues.push(sys);
 
