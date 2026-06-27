@@ -5,7 +5,7 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
-<title>血圧測定v2</title>
+<title>血圧測定v1.2</title>
 
 <style>
 
@@ -32,9 +32,10 @@ button{
 }
 
 video{
-    width:120px;
+    width:90%;
     border-radius:20px;
     margin-top:20px;
+    background:black;
 }
 
 canvas{
@@ -58,12 +59,12 @@ canvas{
 #bp{
     font-size:64px;
     font-weight:bold;
-    margin-top:10px;
+    margin-top:20px;
 }
 
 .small{
     font-size:24px;
-    margin-top:10px;
+    margin-top:20px;
     color:#aaa;
 }
 
@@ -78,12 +79,12 @@ canvas{
 
 <div class="container">
 
-    <h1>血圧測定</h1>
+    <h1>血圧測定v1.2</h1>
 
     <div id="startScreen">
 
         <p>
-            カメラに指を密着してください
+            背面カメラに指を密着してください
         </p>
 
         <button onclick="startMeasurement()">
@@ -109,30 +110,26 @@ canvas{
             BPM: --
         </div>
 
-        <div id="result">
+        <div id="bp">
+            -- / --
+        </div>
 
-    <div id="bp">
-        -- / --
-    </div>
+        <div class="small">
 
-    <div class="small">
+            最高血圧:
+            <span id="sysText">--</span>
 
-        最高血圧:
-        <span id="sysText">--</span>
+            <br>
 
-        <br>
+            最低血圧:
+            <span id="diaText">--</span>
 
-        最低血圧:
-        <span id="diaText">--</span>
+            <br>
 
-        <br>
+            脈拍:
+            <span id="pulseText">--</span>
 
-        脈拍:
-        <span id="pulseText">--</span>
-
-    </div>
-
-</div>
+        </div>
 
     </div>
 
@@ -161,6 +158,9 @@ const bpmText =
 const bpText =
     document.getElementById("bp");
 
+const timerText =
+    document.getElementById("timer");
+
 const sysText =
     document.getElementById("sysText");
 
@@ -169,12 +169,6 @@ const diaText =
 
 const pulseText =
     document.getElementById("pulseText");
-
-const timerText =
-    document.getElementById("timer");
-
-const minmaxText =
-    document.getElementById("minmax");
 
 let stream = null;
 
@@ -187,6 +181,7 @@ let interval = null;
 let sysValues = [];
 
 let diaValues = [];
+
 let bpmValues = [];
 
 async function startMeasurement(){
@@ -195,81 +190,59 @@ async function startMeasurement(){
 
     measureScreen.classList.remove("hidden");
 
-    const devices =
-    await navigator.mediaDevices.enumerateDevices();
+    timer = 20;
 
-const cameras =
-    devices.filter(
-        d => d.kind === "videoinput"
-    );
+    samples = [];
 
-console.log(cameras);
+    sysValues = [];
 
-let selectedCamera =
-    cameras.find(c =>
+    diaValues = [];
 
-        c.label.includes("Wide") ||
+    bpmValues = [];
 
-        c.label.includes("Back Camera")
-
-    );
-
-if(!selectedCamera){
-
-    selectedCamera = cameras[0];
-}
-
-sstream =
-    await navigator.mediaDevices.getUserMedia({
-        video:{
-            facingMode:{
-                ideal:"environment"
-            },
-            width:{ ideal:1280 },
-            height:{ ideal:720 },
-            frameRate:{ ideal:30 }
-        }
-    });
+    stream =
+        await navigator.mediaDevices.getUserMedia({
+            video:{
+                facingMode:{
+                    ideal:"environment"
+                },
+                width:{ ideal:1280 },
+                height:{ ideal:720 },
+                frameRate:{ ideal:30 }
+            }
+        });
 
     video.srcObject = stream;
 
-    // Torch ON
     const track =
-    stream.getVideoTracks()[0];
+        stream.getVideoTracks()[0];
 
-try{
+    try{
 
-    const capabilities =
-        track.getCapabilities();
+        const capabilities =
+            track.getCapabilities();
 
-    if(capabilities.torch){
-
-        await track.applyConstraints({
-            advanced:[
-                {torch:true}
-            ]
-        });
-    }
-
-}catch(e){
-
-    console.log(e);
-}
-}
-
-    if(capabilities.torch){
-
-        try{
+        if(capabilities.torch){
 
             await track.applyConstraints({
                 advanced:[
                     {torch:true}
                 ]
             });
-
-        }catch(e){
-            console.log(e);
         }
+
+        if(capabilities.zoom){
+
+            await track.applyConstraints({
+                advanced:[
+                    {zoom:1.0}
+                ]
+            });
+        }
+
+    }catch(e){
+
+        console.log(e);
     }
 
     interval =
@@ -285,7 +258,8 @@ function startTimer(){
 
             timer--;
 
-            timerText.innerText = timer;
+            timerText.innerText =
+                timer;
 
             if(timer <= 0){
 
@@ -310,9 +284,9 @@ function stopMeasurement(){
 
     video.srcObject = null;
 
-    timerText.innerText = "測定完了";
+    timerText.innerText =
+        "測定完了";
 
-    // 平均化
     const finalSys =
         Math.round(
             sysValues.reduce((a,b)=>a+b,0)
@@ -368,23 +342,24 @@ function analyzeFrame(){
 
     tempCtx.drawImage(video,0,0);
 
-    const size = 150;
+    // 中央だけ解析
+    const size = 180;
 
-const x =
-    (tempCanvas.width / 2)
-    - (size / 2);
+    const x =
+        (tempCanvas.width / 2)
+        - (size / 2);
 
-const y =
-    (tempCanvas.height / 2)
-    - (size / 2);
+    const y =
+        (tempCanvas.height / 2)
+        - (size / 2);
 
-const frame =
-    tempCtx.getImageData(
-        x,
-        y,
-        size,
-        size
-    );
+    const frame =
+        tempCtx.getImageData(
+            x,
+            y,
+            size,
+            size
+        );
 
     let redTotal = 0;
 
@@ -394,33 +369,47 @@ const frame =
     }
 
     const avg =
-    redTotal /
-    (frame.data.length / 4);
+        redTotal /
+        (frame.data.length / 4);
 
-// 指がちゃんと置かれてない時は無視
-if(avg < 120){
-    return;
-}
+    // 指未接触
+    if(avg < 120){
+        return;
+    }
 
-samples.push(avg);
+    // 急変除外
+    if(
+        samples.length > 0 &&
+        Math.abs(
+            avg -
+            samples[samples.length - 1]
+        ) > 15
+    ){
+        return;
+    }
+
+    samples.push(avg);
+
+    // smoothing
     if(samples.length > 3){
 
-    const smooth =
-        (
-            samples[samples.length-1] +
-            samples[samples.length-2] +
-            samples[samples.length-3]
-        ) / 3;
+        const smooth =
+            (
+                samples[samples.length-1] +
+                samples[samples.length-2] +
+                samples[samples.length-3]
+            ) / 3;
 
-    samples[samples.length-1] =
-        smooth;
-}
+        samples[samples.length-1] =
+            smooth;
+    }
 
     if(samples.length > 200){
         samples.shift();
     }
 
     calculate();
+
     drawWave();
 }
 
@@ -434,70 +423,50 @@ function calculate(){
 
     let peaks = [];
 
-for(let i=1; i<samples.length-1; i++){
+    for(let i=1; i<samples.length-1; i++){
 
-    if(
-        samples[i] > mean + 1.2 &&
-        samples[i] > samples[i-1] &&
-        samples[i] > samples[i+1]
-    ){
-
-        // 近すぎるピークを除外
         if(
-            peaks.length === 0 ||
-            i - peaks[peaks.length - 1] > 5
+            samples[i] > mean + 1.2 &&
+            samples[i] > samples[i-1] &&
+            samples[i] > samples[i+1]
         ){
-            peaks.push(i);
+
+            if(
+                peaks.length === 0 ||
+                i - peaks[peaks.length - 1] > 5
+            ){
+                peaks.push(i);
+            }
         }
     }
-}
 
-// 20秒ベース換算
-let bpm =
-    peaks.length * 6;
+    let bpm =
+        (peaks.length * 6);
 
     bpm =
-        Math.max(55,
-        Math.min(140,bpm));
+        Math.max(
+            55,
+            Math.min(140,bpm)
+        );
 
     bpmText.innerText =
         "BPM: " + bpm;
-      bpmValues.push(bpm);
+
+    bpmValues.push(bpm);
 
     let sys =
-    Math.round(
-        116 + (bpm - 70) * 0.45
-    );
+        Math.round(
+            116 + (bpm - 70) * 0.45
+        );
 
-let dia =
-    Math.round(
-        65 + (bpm - 70) * 0.25
-    );
+    let dia =
+        Math.round(
+            65 + (bpm - 70) * 0.25
+        );
 
     sysValues.push(sys);
+
     diaValues.push(dia);
-
-    const minSys =
-        Math.min(...sysValues);
-
-    const maxSys =
-        Math.max(...sysValues);
-
-    const minDia =
-        Math.min(...diaValues);
-
-    const maxDia =
-        Math.max(...diaValues);
-
-    bpText.innerText =
-        sys + " / " + dia;
-
-    minmaxText.innerHTML =
-        `
-        MIN: ${minSys}/${minDia}
-        <br>
-        MAX: ${maxSys}/${maxDia}
-        `;
 }
 
 function drawWave(){
@@ -508,6 +477,10 @@ function drawWave(){
         waveCanvas.width,
         waveCanvas.height
     );
+
+    if(samples.length < 2){
+        return;
+    }
 
     waveCtx.beginPath();
 
@@ -527,13 +500,16 @@ function drawWave(){
             waveCanvas.height -
             (
                 (v - min) /
-                (max - min)
+                (max - min + 0.0001)
             ) *
             waveCanvas.height;
 
         if(i===0){
+
             waveCtx.moveTo(x,y);
+
         }else{
+
             waveCtx.lineTo(x,y);
         }
     });
