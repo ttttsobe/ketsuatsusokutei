@@ -5,7 +5,7 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
-<title>血圧測定v1.2</title>
+<title>血圧測定v1.3</title>
 
 <style>
 
@@ -32,10 +32,19 @@ button{
 }
 
 video{
-    width:90%;
+    width:130px;
+    height:130px;
+
+    object-fit:cover;
+
     border-radius:20px;
+
     margin-top:20px;
+
     background:black;
+
+    box-shadow:
+        0 0 30px rgba(255,0,0,0.5);
 }
 
 canvas{
@@ -79,7 +88,7 @@ canvas{
 
 <div class="container">
 
-    <h1>血圧測定v1.2</h1>
+    <h1>血圧測定v1.3</h1>
 
     <div id="startScreen">
 
@@ -206,8 +215,8 @@ async function startMeasurement(){
                 facingMode:{
                     ideal:"environment"
                 },
-                width:{ ideal:1280 },
-                height:{ ideal:720 },
+                width:{ ideal:640 },
+height:{ ideal:480 },
                 frameRate:{ ideal:30 }
             }
         });
@@ -229,16 +238,23 @@ async function startMeasurement(){
                     {torch:true}
                 ]
             });
+
+                await new Promise(r=>setTimeout(r,500));
         }
 
         if(capabilities.zoom){
 
-            await track.applyConstraints({
-                advanced:[
-                    {zoom:1.0}
-                ]
-            });
-        }
+    const minZoom =
+        capabilities.zoom.min || 1;
+
+    await track.applyConstraints({
+        advanced:[
+            {
+                zoom:minZoom
+            }
+        ]
+    });
+}
 
     }catch(e){
 
