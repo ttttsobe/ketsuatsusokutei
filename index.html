@@ -235,23 +235,26 @@ sstream =
 
     // Torch ON
     const track =
-        stream.getVideoTracks()[0];
+    stream.getVideoTracks()[0];
+
+try{
 
     const capabilities =
         track.getCapabilities();
-        if(capabilities.zoom){
 
-    try{
+    if(capabilities.torch){
 
         await track.applyConstraints({
             advanced:[
-                {zoom:1.0}
+                {torch:true}
             ]
         });
-
-    }catch(e){
-        console.log(e);
     }
+
+}catch(e){
+
+    console.log(e);
+}
 }
 
     if(capabilities.torch){
