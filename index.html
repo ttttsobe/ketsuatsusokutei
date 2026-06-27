@@ -5,7 +5,7 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
-<title>血圧測定</title>
+<title>血圧測定v1</title>
 
 <style>
 
@@ -195,17 +195,42 @@ async function startMeasurement(){
 
     measureScreen.classList.remove("hidden");
 
-    stream =
-        await navigator.mediaDevices.getUserMedia({
-            video:{
-    facingMode:{
-        ideal:"environment"
-    },
-    width:{ ideal:1280 },
-    height:{ ideal:720 },
-    frameRate:{ ideal:30 }
+    const devices =
+    await navigator.mediaDevices.enumerateDevices();
+
+const cameras =
+    devices.filter(
+        d => d.kind === "videoinput"
+    );
+
+console.log(cameras);
+
+let selectedCamera =
+    cameras.find(c =>
+
+        c.label.includes("Wide") ||
+
+        c.label.includes("Back Camera")
+
+    );
+
+if(!selectedCamera){
+
+    selectedCamera = cameras[0];
 }
-        });
+
+stream =
+    await navigator.mediaDevices.getUserMedia({
+        video:{
+            deviceId:{
+                exact:
+                    selectedCamera.deviceId
+            },
+            width:{ ideal:1280 },
+            height:{ ideal:720 },
+            frameRate:{ ideal:30 }
+        }
+    });
 
     video.srcObject = stream;
 
