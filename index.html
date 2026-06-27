@@ -32,7 +32,7 @@ button{
 }
 
 video{
-    width:90%;
+    width:120px;
     border-radius:20px;
     margin-top:20px;
 }
@@ -78,7 +78,7 @@ canvas{
 
 <div class="container">
 
-    <h1>Finger Blood Pressure</h1>
+    <h1>血圧測定</h1>
 
     <div id="startScreen">
 
@@ -340,10 +340,27 @@ function analyzeFrame(){
     }
 
     const avg =
-        redTotal /
-        (frame.data.length / 4);
+    redTotal /
+    (frame.data.length / 4);
 
-    samples.push(avg);
+// 指がちゃんと置かれてない時は無視
+if(avg < 120){
+    return;
+}
+
+samples.push(avg);
+    if(samples.length > 3){
+
+    const smooth =
+        (
+            samples[samples.length-1] +
+            samples[samples.length-2] +
+            samples[samples.length-3]
+        ) / 3;
+
+    samples[samples.length-1] =
+        smooth;
+}
 
     if(samples.length > 200){
         samples.shift();
