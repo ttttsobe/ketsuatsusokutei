@@ -5,7 +5,7 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
-<title>血圧測定v1.5</title>
+<title>血圧測定v1.6</title>
 
 <style>
 
@@ -88,7 +88,7 @@ canvas{
 
 <div class="container">
 
-    <h1>血圧測定v1.5</h1>
+    <h1>血圧測定v1.6</h1>
 
     <div id="startScreen">
 
@@ -460,7 +460,7 @@ function calculate(){
     }
 
     let bpm =
-        (peaks.length * 6.8);
+    Math.round(peaks.length * 6.8);
 
     bpm =
         Math.max(
