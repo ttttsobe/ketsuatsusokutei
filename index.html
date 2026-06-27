@@ -109,18 +109,30 @@ canvas{
             BPM: --
         </div>
 
-        <div id="bp">
-            -- / --
-        </div>
+        <div id="result">
 
-        <div class="small"
-             id="minmax">
+    <div id="bp">
+        -- / --
+    </div>
 
-            MIN: -- / --
-            <br>
-            MAX: -- / --
+    <div class="small">
 
-        </div>
+        最高血圧:
+        <span id="sysText">--</span>
+
+        <br>
+
+        最低血圧:
+        <span id="diaText">--</span>
+
+        <br>
+
+        脈拍:
+        <span id="pulseText">--</span>
+
+    </div>
+
+</div>
 
     </div>
 
@@ -149,6 +161,15 @@ const bpmText =
 const bpText =
     document.getElementById("bp");
 
+const sysText =
+    document.getElementById("sysText");
+
+const diaText =
+    document.getElementById("diaText");
+
+const pulseText =
+    document.getElementById("pulseText");
+
 const timerText =
     document.getElementById("timer");
 
@@ -166,6 +187,7 @@ let interval = null;
 let sysValues = [];
 
 let diaValues = [];
+let bpmValues = [];
 
 async function startMeasurement(){
 
@@ -244,7 +266,38 @@ function stopMeasurement(){
 
     video.srcObject = null;
 
-    timerText.innerText = "完了";
+    timerText.innerText = "測定完了";
+
+    // 平均化
+    const finalSys =
+        Math.round(
+            sysValues.reduce((a,b)=>a+b,0)
+            / sysValues.length
+        );
+
+    const finalDia =
+        Math.round(
+            diaValues.reduce((a,b)=>a+b,0)
+            / diaValues.length
+        );
+
+    const finalPulse =
+        Math.round(
+            bpmValues.reduce((a,b)=>a+b,0)
+            / bpmValues.length
+        );
+
+    bpText.innerText =
+        finalSys + " / " + finalDia;
+
+    sysText.innerText =
+        finalSys;
+
+    diaText.innerText =
+        finalDia;
+
+    pulseText.innerText =
+        finalPulse;
 }
 
 function analyzeFrame(){
@@ -330,6 +383,7 @@ function calculate(){
 
     bpmText.innerText =
         "BPM: " + bpm;
+      bpmValues.push(bpm);
 
     let sys =
         Math.round(
