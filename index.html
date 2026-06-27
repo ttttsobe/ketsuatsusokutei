@@ -198,10 +198,13 @@ async function startMeasurement(){
     stream =
         await navigator.mediaDevices.getUserMedia({
             video:{
-                facingMode:{
-                    ideal:"environment"
-                }
-            }
+    facingMode:{
+        ideal:"environment"
+    },
+    width:{ ideal:1280 },
+    height:{ ideal:720 },
+    frameRate:{ ideal:30 }
+}
         });
 
     video.srcObject = stream;
@@ -212,6 +215,20 @@ async function startMeasurement(){
 
     const capabilities =
         track.getCapabilities();
+        if(capabilities.zoom){
+
+    try{
+
+        await track.applyConstraints({
+            advanced:[
+                {zoom:1.0}
+            ]
+        });
+
+    }catch(e){
+        console.log(e);
+    }
+}
 
     if(capabilities.torch){
 
@@ -324,13 +341,23 @@ function analyzeFrame(){
 
     tempCtx.drawImage(video,0,0);
 
-    const frame =
-        tempCtx.getImageData(
-            0,
-            0,
-            tempCanvas.width,
-            tempCanvas.height
-        );
+    const size = 150;
+
+const x =
+    (tempCanvas.width / 2)
+    - (size / 2);
+
+const y =
+    (tempCanvas.height / 2)
+    - (size / 2);
+
+const frame =
+    tempCtx.getImageData(
+        x,
+        y,
+        size,
+        size
+    );
 
     let redTotal = 0;
 
