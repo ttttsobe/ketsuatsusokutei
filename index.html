@@ -5,16 +5,28 @@
 <meta name="viewport"
       content="width=device-width, initial-scale=1">
 
-<title>血圧測定v1.6</title>
+<title>血圧測定v1.8</title>
 
 <style>
 
 body{
     margin:0;
-    background:#111;
-    color:white;
+
+    background:
+        linear-gradient(
+            180deg,
+            #dff6ff 0%,
+            #bfe9ff 50%,
+            #a6dcff 100%
+        );
+
+    color:#1a1a1a;
+
     font-family:sans-serif;
+
     text-align:center;
+
+    min-height:100vh;
 }
 
 .container{
@@ -22,8 +34,8 @@ body{
 }
 
 button{
-    font-size:24px;
-    padding:16px 32px;
+    font-size:16px;
+    padding:14px 28px;
     border:none;
     border-radius:16px;
     background:#ff3b30;
@@ -32,12 +44,12 @@ button{
 }
 
 video{
-    width:130px;
-    height:130px;
+    width:100px;
+    height:100px;
 
     object-fit:cover;
 
-    border-radius:20px;
+    border-radius:50px;
 
     margin-top:20px;
 
@@ -49,32 +61,32 @@ video{
 
 canvas{
     width:90%;
-    height:180px;
-    background:#000;
+    height:70px;
+    background:#FFFFFF;
     border-radius:16px;
     margin-top:20px;
 }
 
 #timer{
-    font-size:48px;
+    font-size:40px;
     margin-top:20px;
 }
 
 #bpm{
-    font-size:42px;
+    font-size:20px;
     margin-top:20px;
 }
 
 #bp{
-    font-size:64px;
+    font-size:30px;
     font-weight:bold;
     margin-top:20px;
 }
 
 .small{
-    font-size:24px;
+    font-size:20px;
     margin-top:20px;
-    color:#aaa;
+    color:#1a1a1a;
 }
 
 .hidden{
@@ -88,7 +100,7 @@ canvas{
 
 <div class="container">
 
-    <h1>血圧測定v1.6</h1>
+    <h1>血圧測定v1.8</h1>
 
     <div id="startScreen">
 
@@ -96,8 +108,8 @@ canvas{
             背面カメラに指を密着してください
         </p>
 
-        <button onclick="startMeasurement()">
-            計測開始
+        <button onclick="prepareCamera()">
+            カメラ起動
         </button>
 
     </div>
@@ -113,10 +125,18 @@ canvas{
                autoplay
                playsinline></video>
 
+        <br>
+
+        <button id="realStartButton"
+                onclick="beginMeasurement()"
+                style="display:none;">
+            この状態で計測開始
+        </button>
+
         <canvas id="wave"></canvas>
 
         <div id="bpm">
-            BPM: --
+            脈拍（現在の瞬間値）: --
         </div>
 
         <div id="bp">
@@ -139,6 +159,15 @@ canvas{
             <span id="pulseText">--</span>
 
         </div>
+
+        <button id="retryButton"
+                onclick="location.reload()"
+                style="
+                    display:none;
+                    background:#34c759;
+                ">
+            もう一度測定
+        </button>
 
     </div>
 
@@ -193,21 +222,13 @@ let diaValues = [];
 
 let bpmValues = [];
 
-async function startMeasurement(){
+
+// カメラ起動
+async function prepareCamera(){
 
     startScreen.classList.add("hidden");
 
     measureScreen.classList.remove("hidden");
-
-    timer = 30;
-
-    samples = [];
-
-    sysValues = [];
-
-    diaValues = [];
-
-    bpmValues = [];
 
     stream =
         await navigator.mediaDevices.getUserMedia({
@@ -216,7 +237,7 @@ async function startMeasurement(){
                     ideal:"environment"
                 },
                 width:{ ideal:640 },
-height:{ ideal:480 },
+                height:{ ideal:480 },
                 frameRate:{ ideal:30 }
             }
         });
@@ -238,35 +259,63 @@ height:{ ideal:480 },
                     {torch:true}
                 ]
             });
-
-                await new Promise(r=>setTimeout(r,500));
         }
 
         if(capabilities.zoom){
 
-    const minZoom =
-        capabilities.zoom.min || 1;
+            const minZoom =
+                capabilities.zoom.min || 1;
 
-    await track.applyConstraints({
-        advanced:[
-            {
-                zoom:minZoom
-            }
-        ]
-    });
-}
+            await track.applyConstraints({
+                advanced:[
+                    {
+                        zoom:minZoom
+                    }
+                ]
+            });
+        }
 
     }catch(e){
 
         console.log(e);
     }
 
-    interval =
-        setInterval(analyzeFrame, 40);
-
-    startTimer();
+    document.getElementById(
+        "realStartButton"
+    ).style.display =
+        "inline-block";
 }
 
+
+// 本計測開始
+function beginMeasurement(){
+
+    timer = 30;
+
+    timerText.innerText =
+        timer;
+
+    samples = [];
+
+    sysValues = [];
+
+    diaValues = [];
+
+    bpmValues = [];
+
+    interval =
+        setInterval(analyzeFrame,40);
+
+    startTimer();
+
+    document.getElementById(
+        "realStartButton"
+    ).style.display =
+        "none";
+}
+
+
+// タイマー
 function startTimer(){
 
     const countdown =
@@ -287,6 +336,8 @@ function startTimer(){
         },1000);
 }
 
+
+// 測定終了
 function stopMeasurement(){
 
     clearInterval(interval);
@@ -332,8 +383,15 @@ function stopMeasurement(){
 
     pulseText.innerText =
         finalPulse;
+
+    document.getElementById(
+        "retryButton"
+    ).style.display =
+        "inline-block";
 }
 
+
+// フレーム解析
 function analyzeFrame(){
 
     if(video.videoWidth === 0) return;
@@ -358,7 +416,6 @@ function analyzeFrame(){
 
     tempCtx.drawImage(video,0,0);
 
-    // 中央だけ解析
     const size = 180;
 
     const x =
@@ -399,7 +456,7 @@ function analyzeFrame(){
         Math.abs(
             avg -
             samples[samples.length - 1]
-        ) > 15
+        ) > 30
     ){
         return;
     }
@@ -429,10 +486,12 @@ function analyzeFrame(){
     drawWave();
 }
 
+
+// BPM計算
 function calculate(){
 
-    // 最初の安定化待ち
-    if(samples.length < 80){
+    // 最初5秒無視
+    if(samples.length < 120){
         return;
     }
 
@@ -460,7 +519,7 @@ function calculate(){
     }
 
     let bpm =
-    Math.round(peaks.length * 6.8);
+        Math.round(peaks.length * 6.8);
 
     bpm =
         Math.max(
@@ -474,20 +533,22 @@ function calculate(){
     bpmValues.push(bpm);
 
     let sys =
-    Math.round(
-        118 + (bpm - 70) * 0.5
-    );
+        Math.round(
+            118 + (bpm - 70) * 0.5
+        );
 
-let dia =
-    Math.round(
-        67 + (bpm - 70) * 0.3
-    );
+    let dia =
+        Math.round(
+            67 + (bpm - 70) * 0.3
+        );
 
     sysValues.push(sys);
 
     diaValues.push(dia);
 }
 
+
+// 波形描画
 function drawWave(){
 
     waveCtx.clearRect(
